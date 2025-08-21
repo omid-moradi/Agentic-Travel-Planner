@@ -1,40 +1,59 @@
-# agents/planner.py
 from autogen_agentchat.agents import AssistantAgent
 from config.settings import google_cfg, app_cfg
 
-SYSTEM_MSG = (
-    "You are a travel planner agent.\n"
-    "Transform user request + research findings into a realistic itinerary.\n"
-    "Output ONLY one JSON object with keys: overview, days[], total_est_cost_usd.\n"
-    "Each day item: {date (YYYY-MM-DD), summary, morning[], afternoon[], evening[], est_cost_usd (float)}.\n"
-    "Constraints: respect budget level; minimize transit friction; cluster POIs geographically;\n"
-    "use opening hours heuristics; add buffer time; avoid backtracking.\n"
-    "Rules: strictly valid JSON; no comments; no trailing commas; USD floats."
-)
+SYSTEM_MSG = """
+You are a travel planner agent specialized in trips in Iran.
+Transform user request + research findings into a feasible itinerary for Iran.
+OUTPUT (strict JSON, one object):
+{
+  "currency": "TOMAN",
+  "overview": "string",
+  "days": [
+    {
+      "date": "YYYY-MM-DD",
+      "summary": "string",
+      "morning": ["POI or activity", "..."],
+      "afternoon": ["POI or activity", "..."],
+      "evening": ["POI or activity", "..."],
+      "est_cost_toman": 0
+    }
+  ],
+  "total_est_cost_toman": 0
+}
+CONSTRAINTS:
+- Respect budget level; minimize transit friction; cluster POIs geographically in Iranian cities.
+- Consider opening hours, prayer times where relevant, domestic transport (flight/train/bus/metro/taxi apps), and seasonal variations.
+- Add buffer time; avoid backtracking; ensure activities are culturally appropriate.
+RULES:
+- Strict JSON (no markdown fences, no comments, no trailing commas).
+- All costs in TOMAN; use rounded integers (no decimals). If uncertain, use conservative ranges in text but pick a single rounded integer for the JSON fields.
+"""
 
-def build_planner(model_client) -> AssistantAgent:
+async def build_planner(model_client) -> AssistantAgent:
     """
-    Build the planner agent using the OpenAI-compatible Gemini client.
-    - Forces structured JSON output via OpenAI-style `response_format`.
-    - Passes Gemini-specific reasoning effort via `extra_body`.
+    Create and configure the Iran-focused planner agent.
+
+    The agent converts the request + research notes into a day-by-day itinerary,
+    enforcing strict JSON with TOMAN budgeting via response_format and default kwargs.
+
+    Args:
+        model_client: OpenAI-compatible Gemini client used for chat completions.
+
+    Returns:
+        AssistantAgent: Configured "planner" agent with JSON output and reasoning effort presets.
     """
     agent = AssistantAgent(
         name="planner",
         model_client=model_client,
-        description="Plans complete, geographically-efficient travel itineraries as JSON.",
+        description="Plans geographically-efficient itineraries in Iran with TOMAN budgeting.",
         system_message=SYSTEM_MSG,
     )
 
-    # Default create kwargs for ALL planner generations.
-    # Note:
-    # - `response_format={"type": "json_object"}` is OpenAI-compatible JSON mode.
-    # - `extra_body={"reasoning": {"effort": ...}}` is Gemini-specific (ignored by non-Gemini backends).
     agent.extra_create_kwargs = {
         "response_format": {"type": "json_object"},
         "extra_body": {
-            "reasoning": {"effort": google_cfg.REASONING_EFFORT}  # none|low|medium|high
+            "reasoning": {"effort": google_cfg.REASONING_EFFORT}
         },
-        # Optional: you can also pass temperature per-agent if you want to override global:
         "temperature": app_cfg.TEMPERATURE,
     }
 
