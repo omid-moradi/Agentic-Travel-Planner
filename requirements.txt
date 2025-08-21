@@ -4,3 +4,4 @@ dotenv
 autogen-core
 pydantic
 pytest
+pytest-asyncio

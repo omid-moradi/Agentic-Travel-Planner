@@ -13,6 +13,7 @@ def get_termination_conditions():
     text_mention_termination = TextMentionTermination(app_cfg.TERMINATION_WORD)
     return text_mention_termination
 
+# State persistence
 def save_state(agent, file_path: str):
     """
     Persist agent state to a JSON file (best-effort).
@@ -25,6 +26,7 @@ def save_state(agent, file_path: str):
     except Exception as e:
         print(f"[WARN] Failed to save state: {e}")
 
+# State loading
 def load_state(agent, file_path: str):
     """
     Load agent state from a JSON file (best-effort).
