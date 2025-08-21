@@ -1,0 +1,8 @@
+import os
+
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+MODEL = "gemini-2.5-flash"
+TEMPERATURE = 0.69
+MAX_TOKENS = 1024
+MAX_TURNS = 7
+TERMINATION_WORD = "end"
