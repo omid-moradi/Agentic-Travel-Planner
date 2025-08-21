@@ -3,3 +3,4 @@ autogen-ext[openai]
 dotenv
 autogen-core
 pydantic
+pytest
