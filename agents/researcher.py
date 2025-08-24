@@ -52,15 +52,13 @@ async def build_researcher(model_client) -> AssistantAgent:
         name="researcher",
         model_client=model_client,
         description="Conducts destination research for Iran and returns structured findings with sources (TOMAN).",
-        system_message=SYSTEM_MSG,
+        system_message=SYSTEM_MSG
     )
 
     agent.extra_create_kwargs = {
         "response_format": {"type": "json_object"},
-        "extra_body": {
-            "reasoning": {"effort": google_cfg.REASONING_EFFORT}  # none|low|medium|high
-        },
-        "temperature": min(app_cfg.TEMPERATURE, 0.35),
+        "extra_body": {"reasoning": {"effort": google_cfg.REASONING_EFFORT}},
+        "temperature": min(app_cfg.TEMPERATURE, 0.35)
     }
 
     return agent

@@ -1,6 +1,7 @@
 from autogen_agentchat.agents import AssistantAgent
 from config.settings import google_cfg, app_cfg
 
+
 SYSTEM_MSG = """
 You are a travel planner agent specialized in trips in Iran.
 
@@ -63,11 +64,9 @@ async def build_planner(model_client) -> AssistantAgent:
     )
 
     agent.extra_create_kwargs = {
-        "response_format": {"type": "json_object"},
-        "extra_body": {
-            "reasoning": {"effort": google_cfg.REASONING_EFFORT}
-        },
-        "temperature": app_cfg.TEMPERATURE,
-    }
+      "response_format": {"type": "json_object"},
+      "extra_body": {"reasoning": {"effort": google_cfg.REASONING_EFFORT}},
+      "temperature": app_cfg.TEMPERATURE
+}
 
     return agent

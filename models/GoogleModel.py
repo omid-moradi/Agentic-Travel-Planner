@@ -15,7 +15,7 @@ model_client = OpenAIChatCompletionClient(
     api_key=google_cfg.API_KEY,
     base_url=google_cfg.BASE_URL,
     temperature=app_cfg.TEMPERATURE,
-    max_tokens=1024,
+    max_tokens=4096,
     timeout=google_cfg.TIMEOUT, 
     model_info=MODEL_INFO,
 )
