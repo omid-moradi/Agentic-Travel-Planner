@@ -18,6 +18,7 @@ async def build_writer(model_client) -> AssistantAgent:
         system_message=SYSTEM_MSG,
     )
     agent.extra_create_kwargs = {
-        "temperature": max(0.5, app_cfg.TEMPERATURE), 
+        "temperature": max(0.5, app_cfg.TEMPERATURE),
+        "max_tokens": 8192
     }
     return agent

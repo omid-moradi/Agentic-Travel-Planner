@@ -30,6 +30,7 @@ Example:
 
 ## CONSTRAINTS:
 - Respect budget level; minimize transit friction; cluster POIs geographically in Iranian cities.
+- The user requested the trip for the date [USER_DATE]. You MUST use this exact date as the start date for the itinerary. Do not alter or estimate it.
 - Consider opening hours, prayer times where relevant, domestic transport (flight/train/bus/metro/taxi apps), and seasonal variations.
 - Add buffer time; avoid backtracking; ensure activities are culturally appropriate.
 

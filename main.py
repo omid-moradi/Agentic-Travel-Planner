@@ -1,7 +1,8 @@
-import asyncio
 from autogen_agentchat.messages import TextMessage
 from teams.travel_team import build_travel_team
 import logging
+import asyncio
+import openai
 
 
 logging.basicConfig(level=logging.INFO)
@@ -33,8 +34,21 @@ async def main():
             print("⚠️ No result received from team execution.")
 
 
+    # ----- Specific API Error Handling -----
+    except openai.AuthenticationError as e:
+        print("\n❌ Authentication Error: Your API key is invalid or expired.")
+        print(f"   Details: {e}")
+    except openai.RateLimitError as e:
+        print("\n❌ Rate Limit Error: You have exceeded the API request limit. Please wait and try again later.")
+        print(f"   Details: {e}")
+    except openai.APITimeoutError as e:
+        print("\n❌ API Timeout Error: The request to the API timed out. Please try again.")
+        print(f"   Details: {e}")
+    except openai.APIConnectionError as e:
+        print("\n❌ API Connection Error: Could not connect to the API server. Check your internet connection.")
+        print(f"   Details: {e}")
     except Exception as e:
-        print(f"\n❌ A critical error occurred: {e}")
+        print(f"\n❌ An unexpected error occurred: {e}")
 
 
 if __name__ == "__main__": 
