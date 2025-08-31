@@ -1,6 +1,5 @@
-# config/settings.py
-import os
 from dataclasses import dataclass
+import os
 
 # Optional: if you are using a .env file, enable this loader
 try:
@@ -41,9 +40,17 @@ class GoogleConfig:
     # Optional: reasoning effort level for Gemini (none|low|medium|high)
     REASONING_EFFORT: str = os.getenv("REASONING_EFFORT", "low")
 
+@dataclass
+class TavilyConfig:
+    """
+    Tavily API settings.
+    """
+    API_KEY: str = os.getenv("TAVILY_API_KEY", "")
+
 
 app_cfg = AppConfig()
 google_cfg = GoogleConfig()
+tavily_cfg = TavilyConfig()
 
 # Validation: API key must not be empty
 if not (google_cfg.API_KEY and google_cfg.API_KEY.strip()):
@@ -51,3 +58,6 @@ if not (google_cfg.API_KEY and google_cfg.API_KEY.strip()):
         "GOOGLE_API_KEY is not set. "
         "Set it via environment variable or .env file, e.g. export GOOGLE_API_KEY='your_key'."
     )
+
+if not (tavily_cfg.API_KEY and tavily_cfg.API_KEY.strip()):
+    print("[WARN] TAVILY_API_KEY is not set. The Web Search tool will not be available.")

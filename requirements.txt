@@ -5,3 +5,4 @@ autogen-core
 pydantic
 pytest
 pytest-asyncio
+tavily-python
