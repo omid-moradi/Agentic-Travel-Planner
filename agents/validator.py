@@ -1,19 +1,20 @@
 # agents/validator.py
 
+import re
+import json
 from typing import Sequence, Optional, Type
 from autogen_agentchat.agents import BaseChatAgent
 from autogen_agentchat.messages import TextMessage, BaseChatMessage
 from autogen_agentchat.base import Response
 from autogen_core import CancellationToken
 
-# Import our Pydantic models and validation utility
 from utils.validation import ResearchReport, ItineraryPlan
 from utils.validation_utils import validate_json_with_model
 
 class ValidatorAgent(BaseChatAgent):
     """
-    A custom, code-based agent for validating JSON messages in an AutoGen v0.4+ chat.
-    This agent does not use an LLM. Its logic is entirely defined in on_messages.
+    A robust, code-based validator for JSON messages (AutoGen v0.4+).
+    It intelligently extracts JSON from markdown blocks before validation.
     """
 
     async def on_messages(
@@ -21,16 +22,22 @@ class ValidatorAgent(BaseChatAgent):
         messages: Sequence[BaseChatMessage],
         cancellation_token: CancellationToken,
     ) -> Response:
-        # The logic inside here remains perfectly correct.
         last_message = messages[-1] if messages else None
 
         if not isinstance(last_message, TextMessage):
-            reply_content = "VALIDATION_SKIPPED: The last message was not a text message."
-            return Response(
-                chat_message=TextMessage(content=reply_content, source=self.name)
-            )
+            reply_content = "VALIDATION_SKIPPED: Last message was not text."
+            return Response(chat_message=TextMessage(content=reply_content, source=self.name))
 
-        content_to_validate = last_message.content
+        # --- INTELLIGENT JSON EXTRACTION ---
+        # This new block makes the agent much more robust.
+        content_to_validate = last_message.content.strip()
+        # Find JSON within markdown code blocks (e.g., ```json ... ```)
+        match = re.search(r"```(json)?\s*({.*})", content_to_validate, re.DOTALL)
+        if match:
+            # If found, extract the pure JSON part.
+            content_to_validate = match.group(2)
+        # ------------------------------------
+
         sender_name = getattr(last_message, "source", None)
         sender_name_lc = (sender_name or "").lower()
 
@@ -45,9 +52,7 @@ class ValidatorAgent(BaseChatAgent):
         else:
             validation_result = f"VALIDATION_SKIPPED: No validation rule for sender '{sender_name}'."
 
-        return Response(
-            chat_message=TextMessage(content=validation_result, source=self.name)
-        )
+        return Response(chat_message=TextMessage(content=validation_result, source=self.name))
 
     async def on_reset(self, cancellation_token: CancellationToken) -> None:
         return None

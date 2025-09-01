@@ -8,6 +8,7 @@ Write a concise, friendly Farsi brief for the user:
 - Use clear section titles (e.g., «روز ۱»، «نکات مهم»، «بودجه تقریبی»).
 - Keep it practical, avoid clichés, and ensure costs remain in TOMAN.
 - Do not expose raw JSON; only produce polished Persian text.
+- IMPORTANT: When your final report is complete and you are finished, add 'پایان' to the end of your message.
 """
 
 async def build_writer(model_client) -> AssistantAgent:
@@ -19,6 +20,6 @@ async def build_writer(model_client) -> AssistantAgent:
     )
     agent.extra_create_kwargs = {
         "temperature": max(0.5, app_cfg.TEMPERATURE),
-        "max_tokens": 8192
+        "max_tokens": 4096
     }
     return agent

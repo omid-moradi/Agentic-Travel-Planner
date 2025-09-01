@@ -1,8 +1,9 @@
 from tavily import TavilyClient
 from config.settings import tavily_cfg
 import logging
+from typing import Any, Dict, List
 
-def web_search(query: str) -> str:
+def web_search(query: str) -> Dict[str, Any]:
     """
     Performs a web search using the Tavily API and returns a summarized result.
 
@@ -10,33 +11,27 @@ def web_search(query: str) -> str:
         query: The search query.
 
     Returns:
-        A formatted string containing the search results, or an error message.
+        {
+          "ok": bool,
+          "answer": str,
+          "sources": [{"name": str, "url": str}]
+        }
     """
     if not tavily_cfg.API_KEY:
-        return "Error: Tavily API key is not configured. Cannot perform web search."
+        return {"ok": False, "answer": "", "sources": [], "error": "Tavily API key is not configured"}
 
     try:
-        # Initialize the Tavily client
         tavily = TavilyClient(api_key=tavily_cfg.API_KEY)
-
-        # Perform the search. 'include_answer' provides a summarized answer.
-        response = tavily.search(query=query, search_depth="basic", include_answer=True)
-
-        # Format the results into a clean string
-        answer = response.get("answer", "No summary answer found.")
-        results = response.get("results", [])
-
-        formatted_results = f"**Summary Answer:**\n{answer}\n\n**Sources:**\n"
-        for result in results[:3]: # Return top 3 sources
-            formatted_results += f"- Title: {result.get('title')}\n  URL: {result.get('url')}\n"
-
-        return formatted_results
-
+        resp = tavily.search(query=query, search_depth="basic", include_answer=True)
+        answer = resp.get("answer", "") or ""
+        results: List[Dict[str, str]] = resp.get("results", []) or []
+        sources = []
+        for r in results[:5]:
+            name = r.get("title") or r.get("url") or "source"
+            url = r.get("url") or ""
+            if url:
+                sources.append({"name": name, "url": url})
+        return {"ok": True, "answer": answer, "sources": sources}
     except Exception as e:
         logging.error(f"An error occurred during Tavily web search: {e}")
-        return f"Error performing web search: {e}"
-    
-
-query = "بهترین مهاجم تاریخ کیست؟"
-result = web_search(query)
-print(result)
+        return {"ok": False, "answer": "", "sources": [], "error": str(e)}
