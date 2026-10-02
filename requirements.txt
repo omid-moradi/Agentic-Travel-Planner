@@ -1,8 +1,37 @@
-autogen-agentchat
-autogen-ext[openai]
-dotenv
-autogen-core
-pydantic
-pytest
-pytest-asyncio
-tavily-python
+# Core runtime - see pyproject.toml for the authoritative, pinned dependency set.
+# This file exists for environments that install from requirements.txt directly.
+
+# --- orchestration ---
+langgraph>=1.2,<2
+langgraph-checkpoint>=4.2,<5
+
+# --- data model and configuration ---
+pydantic>=2.11,<3
+pydantic-settings>=2.6,<3
+python-dotenv>=1.1,<2
+
+# --- http / model clients ---
+httpx>=0.28,<1
+openai>=1.100,<2
+
+# --- development and quality gates ---
+pytest>=8.4
+pytest-asyncio>=1.1
+pytest-cov>=6.0
+ruff>=0.8
+mypy>=1.13
+
+# --- optional extras ---
+# tavily-python>=0.7,<1        # web search          (extra: search)
+# selectolax>=0.3.21           # static HTML parsing (extra: providers)
+# beautifulsoup4>=4.12         # static HTML parsing (extra: providers)
+# fastapi>=0.115,<1            # API                 (extra: api)
+# uvicorn[standard]>=0.32      # API server          (extra: api)
+# sqlalchemy[asyncio]>=2.0.36  # persistence         (extra: api)
+# alembic>=1.14                # migrations          (extra: api)
+# aiosqlite>=0.20              # test/dev database   (extra: api)
+# asyncpg>=0.30                # postgres driver     (extra: api)
+
+# NOTE: the legacy AutoGen prototype (legacy_prototype/) additionally needs
+# autogen-agentchat, autogen-core and autogen-ext[openai]. Those are intentionally
+# NOT listed here: the product no longer depends on AutoGen (ADR-002).
