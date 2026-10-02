@@ -1,5 +1,43 @@
+# --- secrets ---
 .env
+.env.*
+!.env.example
+
+# --- python ---
 /.venv
+/venv
 __pycache__/
-*.pyo
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# --- data / local databases ---
+*.db
+*.sqlite3
+/data/
+
+# --- node / frontend ---
+node_modules/
+/web/.next/
+/web/out/
+/web/playwright-report/
+/web/test-results/
+npm-debug.log*
+
+# --- evaluation output ---
+/evaluation/reports/*.json
+/evaluation/reports/*.md
+!/evaluation/reports/.gitkeep
+
+# --- editors / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
 /project_structure
