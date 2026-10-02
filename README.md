@@ -1,9 +1,10 @@
 # Agentic Travel Planner
 
-> **Work in progress.** Phase 0 of 10 complete. The current code is the original AutoGen
-> prototype; it is being rebuilt into a modular monolith orchestrated by LangGraph.
-> See [`plan-mode-cline.md`](plan-mode-cline.md) for the full phased plan and
-> [`STATUS-P0.md`](STATUS-P0.md) for the current status.
+> **Work in progress.** Phases 0 and 1 of 10 are complete. The product core (schemas, the
+> LangGraph workflow, the optimizer and the data providers) is not written yet - what exists
+> today is the foundation: typed configuration, a provider-agnostic model layer, structured
+> logging, a CLI and a test suite. See [`plan-mode-cline.md`](plan-mode-cline.md) for the plan,
+> [`STATUS-P0.md`](STATUS-P0.md) and [`STATUS-P1.md`](STATUS-P1.md) for honest status.
 
 An AI travel product that plans and manages an **entire trip** - for **domestic Iran trips and
 international trips**, in **Persian (RTL) and English**.
@@ -39,63 +40,95 @@ international trips**, in **Persian (RTL) and English**.
 
 ## Architecture (summary)
 
-- **LangGraph** orchestration over a typed, checkpointed `TravelState`.
-- **Provider-agnostic LLM layer** - OpenAI-compatible gateway by default, plus Ollama and an
+- **LangGraph** orchestration over a typed, checkpointed `TravelState` (phase 2).
+- **Provider-agnostic LLM layer** - any OpenAI-compatible endpoint, plus Ollama and an
   offline `mock` provider. No vendor lock-in.
-- **Scraping-first, API-ready providers** - every capability is a `Protocol` with a configurable
-  fallback chain, so an official API can replace a scraper by changing one env line.
-- **FastAPI + PostgreSQL + Redis** modular monolith, with SQLite and in-process fallbacks so the
-  test suite runs anywhere.
-- **Next.js** web app with full RTL Persian support.
+- **Scraping-first, API-ready providers** - every capability is a `Protocol` with a
+  configurable fallback chain, so an official API can replace a scraper by changing one env
+  line (phase 3).
+- **FastAPI + PostgreSQL + Redis** modular monolith, with SQLite and in-process fallbacks so
+  the test suite runs anywhere (phase 4).
+- **Next.js** web app with full RTL Persian support (phase 5).
 
 Full details: [`docs/architecture.md`](docs/architecture.md).
 
-## Project layout
+## Getting started
 
-```text
-docs/            audit, decisions (ADRs), architecture, data sources, reports
-src/             product code (travel_planner package) - from phase 1
-web/             Next.js frontend - from phase 5
-evaluation/      scenario harness and metrics - from phase 8
-legacy_prototype/  the original AutoGen spike - deleted in phase 4
-```
+### Requirements
 
-## Getting started (current state)
+Python 3.11+ (developed and tested on 3.13.5).
 
-The repository is mid-migration. For the original prototype:
+### Install
 
 ```bash
-pip install -r requirements.txt
-cp .env.example .env     # then fill in LLM_API_KEY
-python main.py           # runs the hard-coded demo task
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1          # Windows
+pip install -e ".[dev]"
 ```
 
-Phase 1 replaces this with a proper `pyproject.toml`, a `src/` layout, and lint/type/test gates.
-The exact commands for the finished product are documented in the Phase 9 README.
+### Configure
 
-## Configuration
+```bash
+copy .env.example .env                # Windows
+cp .env.example .env                  # macOS / Linux
+```
 
-All configuration is environment-based. Copy `.env.example` to `.env` and fill it in.
+Then set at least:
 
-| Variable | Purpose |
-|---|---|
-| `LLM_PROVIDER` | `apmix`, `openai`, `openai_compatible`, `ollama` or `mock` |
-| `LLM_BASE_URL` | OpenAI-compatible endpoint |
-| `LLM_API_KEY` | API key (never committed) |
-| `LLM_MODEL` | Model id |
-| `DATABASE_URL` | SQLAlchemy async URL; SQLite works out of the box |
-| `<CAPABILITY>_PROVIDERS` | Ordered provider fallback chain per capability |
-| `TAVILY_API_KEY` | Web search (optional) |
+```dotenv
+LLM_PROVIDER=apmix
+LLM_BASE_URL=https://api.apmix.ai/v1
+LLM_API_KEY=your_key_here
+LLM_MODEL=deepseek/deepseek-v4-flash-free
+```
 
-The app must run end-to-end in **demo mode with zero paid keys** (`LLM_PROVIDER=mock`).
+`.env` is git-ignored and a pre-commit hook blocks live credentials from being committed.
+
+To run completely offline with no keys at all, set `LLM_PROVIDER=mock`.
+
+### Use the CLI
+
+```bash
+travel-planner config      # effective configuration, secrets masked
+travel-planner ping "What is the best time to visit Kashgar?"
+travel-planner --help
+```
+
+### Run the checks
+
+```bash
+ruff check src tests scripts   # lint
+mypy                           # strict type check
+pytest -q                      # offline suite (66 tests)
+pytest -m live                 # opt-in tests that call the real gateway (7 tests)
+pytest -q --cov                # with coverage (currently 88%)
+pre-commit run --all-files     # all of the above plus secret scanning
+```
+
+### Layout
+
+```text
+src/travel_planner/
+  errors.py            shared exception hierarchy
+  config/settings.py   typed env settings, no import-time validation
+  config/regions.py    Iran / international market profiles
+  llm/factory.py       provider-agnostic model layer
+  logging_config.py    structured logs with secret and PII redaction
+  cli.py               command line entry point
+docs/                  audit, decisions (ADRs), architecture, data sources, reports
+tests/unit             offline tests
+tests/integration      opt-in live provider tests
+evaluation/            scenario harness (phase 8)
+legacy_prototype/      the original AutoGen spike, deleted in phase 4
+```
 
 ## Development status
 
 | Phase | Scope | Status |
 |---|---|---|
-| 0 | Audit, ADRs, architecture, plan | Done |
-| 1 | Core foundation, apmix/LLM migration | Next |
-| 2 | Agentic core + optimizer | Planned |
+| 0 | Audit, ADRs, architecture, plan | **Done** |
+| 1 | Core foundation, LLM migration, quality gates | **Done** |
+| 2 | Agentic core + optimizer | Next |
 | 3 | Data providers (scraping-first) | Planned |
 | 4 | Persistence + API | Planned |
 | 5 | Web app | Planned |
@@ -105,6 +138,14 @@ The app must run end-to-end in **demo mode with zero paid keys** (`LLM_PROVIDER=
 | 9 | DevOps, docs, final report | Planned |
 
 Honest status, including anything unverified, is recorded in each `STATUS-P<n>.md`.
+
+## Known limitations right now
+
+- **There is no trip planning yet.** No `TripRequest`, no itinerary, no graph. Phases 2+.
+- **No data providers yet.** No places, hotels, weather or routes. Phase 3.
+- **No API, database or web app yet.** Phases 4 and 5.
+- Docker, PostgreSQL and Redis were unavailable in the development environment, so those
+  parts are planned but unbuilt.
 
 ## License
 

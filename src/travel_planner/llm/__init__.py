@@ -1,0 +1,45 @@
+"""Provider-agnostic LLM layer. See :mod:`travel_planner.llm.factory`."""
+
+from travel_planner.errors import LLMConfigurationError, LLMError, LLMResponseError
+from travel_planner.llm.factory import (
+    LLMResult,
+    Message,
+    MockLLM,
+    OpenAICompatibleLLM,
+    ToolCall,
+    TravelPlannerLLM,
+    Usage,
+    assistant,
+    build_extraction_llm,
+    build_llm,
+    describe_provider,
+    extract_json,
+    get_llm,
+    reset_llm_cache,
+    system,
+    tool_result,
+    user,
+)
+
+__all__ = [
+    "LLMConfigurationError",
+    "LLMError",
+    "LLMResponseError",
+    "LLMResult",
+    "Message",
+    "MockLLM",
+    "OpenAICompatibleLLM",
+    "ToolCall",
+    "TravelPlannerLLM",
+    "Usage",
+    "assistant",
+    "build_extraction_llm",
+    "build_llm",
+    "describe_provider",
+    "extract_json",
+    "get_llm",
+    "reset_llm_cache",
+    "system",
+    "tool_result",
+    "user",
+]

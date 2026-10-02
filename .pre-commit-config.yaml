@@ -1,0 +1,50 @@
+# Install with: pip install pre-commit && pre-commit install
+# Run all hooks manually with: pre-commit run --all-files
+default_language_version:
+  python: python3
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+      - id: detect-private-key
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.6
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^(src|tests)/
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        files: ^src/
+        additional_dependencies:
+          - pydantic>=2.11
+          - pydantic-settings>=2.6
+          - types-requests
+
+  - repo: local
+    hooks:
+      - id: pytest-offline
+        name: pytest (offline suite)
+        entry: python -m pytest -q -m "not live"
+        language: system
+        pass_filenames: false
+        types: [python]
+
+      - id: block-secrets
+        name: block committed secrets
+        entry: python scripts/check_no_secrets.py
+        language: system
+        pass_filenames: false
+        types: [python]
