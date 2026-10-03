@@ -46,6 +46,7 @@ dev = [
   "ruff>=0.8",
   "mypy>=1.13",
   "pip-audit>=2.7",
+  "asgi-lifespan>=2.1",
 ]
 all = [
   "travel-planner[providers,search,api,dev]",
