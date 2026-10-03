@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Sample Attractions Page - saved fixture for parser contract tests</title>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "TouristAttraction",
+      "name": "Arg of Karim Khan",
+      "description": "A citadel from the Zand dynasty in central Shiraz.",
+      "url": "https://example-attractions.test/shiraz/arg-karim-khan",
+      "address": {
+        "streetAddress": "Zand Boulevard",
+        "addressLocality": "Shiraz",
+        "addressRegion": "Fars"
+      },
+      "geo": { "latitude": 29.6175, "longitude": 52.5443 }
+    },
+    {
+      "@type": "TouristAttraction",
+      "name": "Qavam House (Naranjestan Garden)",
+      "description": "19th-century Persian garden and house.",
+      "url": "https://example-attractions.test/shiraz/qavam-house",
+      "address": {
+        "streetAddress": "Lotf Ali Khan Zand Street",
+        "addressLocality": "Shiraz"
+      },
+      "geo": { "latitude": 29.6234, "longitude": 52.5519 }
+    },
+    {
+      "@type": "Hotel",
+      "name": "Fixture Grand Hotel",
+      "url": "https://example-attractions.test/shiraz/fixture-grand-hotel",
+      "address": { "addressLocality": "Shiraz" },
+      "geo": { "latitude": 29.6111, "longitude": 52.5400 },
+      "description": "Sample hotel record embedded in the same page."
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<h1>Sample page</h1>
+<script>alert("this must be stripped by sanitize_html")</script>
+<p onclick="steal()">Visible content that should never reach an LLM as markup.</p>
+<!-- a deliberately malformed JSON-LD block that the parser must skip, not crash on -->
+<script type="application/ld+json">{ "name": broken json }</script>
+</body>
+</html>
