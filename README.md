@@ -1,6 +1,6 @@
 # Agentic Travel Planner
 
-> **Work in progress.** Phases 0, 1, 2 and 3 of 10 are complete. The product core (schemas, the
+> **Work in progress.** Phases 0-4 of 10 are complete. The product core (schemas, the
 > LangGraph workflow, the optimizer and the data providers) is not written yet - what exists
 > today is the foundation plus a working offline planner: typed schemas, a LangGraph workflow
 > with nine parallel research nodes, a deterministic optimizer and validator, and a CLI. See [`plan-mode-cline.md`](plan-mode-cline.md) for the plan,
@@ -137,8 +137,8 @@ legacy_prototype/      the original AutoGen spike, deleted in phase 4
 | 1 | Core foundation, LLM migration, quality gates | **Done** |
 | 2 | Agentic core + optimizer | **Done** |
 | 3 | Data providers (scraping-first) | **Done** |
-| 4 | Persistence + API | Next |
-| 5 | Web app | Planned |
+| 4 | Persistence + API | **Done** |
+| 5 | Web app | Next |
 | 6 | Monetization | Planned |
 | 7 | Whole-trip features | Planned |
 | 8 | Observability, eval, MCP | Planned |
@@ -153,7 +153,7 @@ Honest status, including anything unverified, is recorded in each `STATUS-P<n>.m
   hotels all come from the fixture set). Phase 3.
 - **Days within one city repeat the same venues** because the fixture set has only 4-5
   venues per city. Real providers will diversify it.
-- **No API, database or web app yet.** Phases 4 and 5.
+- **No web app yet.** The JSON API is complete; the UI arrives in phase 5.
 - Docker, PostgreSQL and Redis were unavailable in the development environment, so those
   parts are planned but unbuilt.
 
