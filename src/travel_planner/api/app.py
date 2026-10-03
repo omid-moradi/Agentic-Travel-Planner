@@ -79,6 +79,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 def create_app(*, database_url: str | None = None, rate_limit: int = 60) -> FastAPI:
     """Build the FastAPI application with all routers attached."""
+    from fastapi.middleware.cors import CORSMiddleware
+
     from travel_planner.api.routers import health, share, trips, usage
 
     app = FastAPI(
@@ -92,6 +94,17 @@ def create_app(*, database_url: str | None = None, rate_limit: int = 60) -> Fast
     )
     app.state.database_url = database_url or resolve_database_url()
     app.state.rate_limiter = InProcessRateLimiter(max_requests=rate_limit)
+
+    # CORS: localhost origins for development; tighten via env in production.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+        ],
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["Content-Type", "X-Request-ID"],
+    )
 
     @app.middleware("http")
     async def rate_limit_and_request_id(request: Request, call_next):  # type: ignore[no-untyped-def]
