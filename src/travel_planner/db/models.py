@@ -220,3 +220,21 @@ class AffiliateClick(IdMixin, Base):
     category: Mapped[str] = mapped_column(String(32))
     target_url: Mapped[str] = mapped_column(Text)
     affiliate_id: Mapped[str] = mapped_column(String(64), default="")
+
+
+class WebhookEvent(IdMixin, Base):
+    """A processed payment webhook, kept for idempotency.
+
+    A duplicate delivery of the same provider event id must be a no-op - the
+    unique constraint below makes the second insert fail loudly instead of
+    double-crediting a subscription.
+    """
+
+    __tablename__ = "webhook_events"
+    __table_args__ = (UniqueConstraint("provider", "event_id", name="uq_webhook_event"),)
+
+    provider: Mapped[str] = mapped_column(String(16))  # mock|stripe|zarinpal
+    event_id: Mapped[str] = mapped_column(String(128))
+    event_type: Mapped[str] = mapped_column(String(64))
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    processed_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

@@ -154,6 +154,15 @@ class Settings(BaseSettings):
     pro_tier_plans_per_month: Annotated[int, Field(ge=0)] = 50
     guest_trial_enabled: bool = True
 
+    # --------------------------------------------------------------- auth
+    #: HS256 secret for JWTs. MUST be set in production; the default is for
+    #: local/demo use only and a warning is logged when it is used.
+    jwt_secret: SecretStr = SecretStr("dev-only-secret-change-me")
+    jwt_algorithm: str = "HS256"
+    access_token_expiry_minutes: Annotated[int, Field(gt=0)] = 60 * 24
+    #: Bootstrap admin: the first account created with this email becomes admin.
+    admin_bootstrap_email: str = ""
+
     # ---------------------------------------------------------- validators
     _split_lists = field_validator(
         "hotels_providers",

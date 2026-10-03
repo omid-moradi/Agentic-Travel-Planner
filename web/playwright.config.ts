@@ -25,6 +25,10 @@ export default defineConfig({
       env: {
         PYTHONPATH: "src",
         LLM_PROVIDER: "mock",
+        // The golden path creates several trips; the guest trial (one plan)
+        // would block re-runs on the persistent e2e database. Quotas have
+        // their own dedicated tests in test_monetization.py.
+        GUEST_TRIAL_ENABLED: "false",
         DATABASE_URL: "sqlite+aiosqlite:///./.pytest_tmp/e2e_golden.db",
       },
     },

@@ -54,6 +54,7 @@ async def create_trip(
     travelers: int = 1,
     budget_total: float | None = None,
     budget_currency: str | None = None,
+    user_id: object | None = None,
 ) -> Trip:
     """Insert a new trip row in ``planning`` status."""
     trip = Trip(
@@ -66,6 +67,7 @@ async def create_trip(
         travelers=travelers,
         budget_total=budget_total,
         budget_currency=budget_currency,
+        user_id=user_id,
     )
     session.add(trip)
     await session.flush()

@@ -36,6 +36,14 @@ def _parse_trip_id(trip_id: str, request: Request) -> uuid.UUID | object:
         )
 
 
+def _bearer_credentials(request: Request) -> str | None:
+    """Extract the bearer token from the Authorization header, if any."""
+    header = request.headers.get("authorization", "")
+    if header.lower().startswith("bearer "):
+        return header[7:].strip() or None
+    return None
+
+
 class CreateTripRequest(BaseModel):
     """Typed request body for POST /trips."""
 
@@ -80,8 +88,44 @@ async def create_trip(
     body: CreateTripRequest,
     request: Request,
     session: AsyncSession = Depends(db_session),
+    caller: object | None = None,
 ) -> object:
-    """Create a trip and plan it immediately (offline demo graph in this phase)."""
+    """Create a trip and plan it immediately (offline demo graph in this phase).
+
+    Quota check first: guests get one plan (the guest trial), accounts get
+    their plan's monthly limit. Rejected callers get the quota error envelope.
+    """
+    # Resolve the caller from the bearer token (optional auth).
+    from travel_planner.services.entitlements import EntitlementService, QuotaExceededError
+
+    user = None
+    # Reuse the bearer scheme without a second dependency declaration.
+    credentials = _bearer_credentials(request)
+    if credentials is not None:
+        from travel_planner.services import auth as auth_service
+
+        try:
+            user = await auth_service.get_user(session, auth_service.decode_access_token(credentials))
+        except auth_service.AuthError:
+            user = None
+
+    plan = "free" if user is not None else "guest"
+    entitlements = EntitlementService()
+    limits = entitlements.limits_for(plan)
+    try:
+        await entitlements.check_quota(
+            session, user_id=str(user.id) if user else None, plan=plan,
+            kind="plan", limit=limits.plans_per_month,
+        )
+    except QuotaExceededError as exc:
+        return error_response(
+            402,
+            "quota_exceeded",
+            str(exc),
+            request.state.request_id,
+            details={"plan": exc.plan, "limit": exc.limit, "used": exc.used},
+        )
+
     trip = await service.create_trip(
         session,
         raw_request=body.request,
@@ -92,6 +136,7 @@ async def create_trip(
         travelers=body.travelers,
         budget_total=body.budget_total,
         budget_currency=body.budget_currency,
+        user_id=getattr(user, "id", None),
     )
     # The graph is deterministic and fast offline; run it inline for now.
     trip = await service.run_plan_for_trip(session, trip)
