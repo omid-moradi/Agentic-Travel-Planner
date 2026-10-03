@@ -26,18 +26,35 @@ def _temp_db(name: str) -> str:
 
 @pytest.fixture(scope="module")
 async def client() -> httpx.AsyncClient:
-    """The app plus a fresh SQLite database, one per module."""
+    """The app plus a fresh SQLite database, one per module.
+
+    Since phase 6 a guest gets exactly one plan (the guest trial), but this
+    suite creates several trips to exercise the API surface. The free-tier
+    quota is raised via env for this module so the two concerns stay separate:
+    quota behaviour is covered by test_monetization.py with fresh databases.
+    """
+    import os
+
     from asgi_lifespan import LifespanManager
 
     from travel_planner.api.app import create_app
+    from travel_planner.config.settings import reload_settings
 
-    app = create_app(database_url=_temp_db("api_e2e"))
-    async with LifespanManager(app) as manager:
-        transport = httpx.ASGITransport(app=manager.app)
-        async with httpx.AsyncClient(
-            transport=transport, base_url="http://testserver"
-        ) as http:
-            yield http
+    os.environ["FREE_TIER_PLANS_PER_MONTH"] = "1000"
+    os.environ["GUEST_TRIAL_ENABLED"] = "false"
+    reload_settings()
+    try:
+        app = create_app(database_url=_temp_db("api_e2e"))
+        async with LifespanManager(app) as manager:
+            transport = httpx.ASGITransport(app=manager.app)
+            async with httpx.AsyncClient(
+                transport=transport, base_url="http://testserver"
+            ) as http:
+                yield http
+    finally:
+        os.environ.pop("FREE_TIER_PLANS_PER_MONTH", None)
+        os.environ.pop("GUEST_TRIAL_ENABLED", None)
+        reload_settings()
 
 
 class TestHealth:

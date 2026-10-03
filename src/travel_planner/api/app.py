@@ -81,7 +81,16 @@ def create_app(*, database_url: str | None = None, rate_limit: int = 60) -> Fast
     """Build the FastAPI application with all routers attached."""
     from fastapi.middleware.cors import CORSMiddleware
 
-    from travel_planner.api.routers import health, share, trips, usage
+    from travel_planner.api.routers import (
+        admin,
+        affiliate,
+        auth,
+        billing,
+        health,
+        share,
+        trips,
+        usage,
+    )
 
     app = FastAPI(
         title="Agentic Travel Planner API",
@@ -129,6 +138,10 @@ def create_app(*, database_url: str | None = None, rate_limit: int = 60) -> Fast
         return response
 
     app.include_router(trips.router, prefix=API_PREFIX)
+    app.include_router(auth.router, prefix=API_PREFIX)
+    app.include_router(billing.router, prefix=API_PREFIX)
+    app.include_router(affiliate.router, prefix=API_PREFIX)
+    app.include_router(admin.router, prefix=API_PREFIX)
     app.include_router(usage.router, prefix=API_PREFIX)
     app.include_router(share.router, prefix=API_PREFIX)
     app.include_router(health.router, prefix=API_PREFIX)
