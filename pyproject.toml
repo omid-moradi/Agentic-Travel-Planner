@@ -85,6 +85,8 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101"]
+# Persian UI copy legitimately contains Arabic-script characters.
+"src/travel_planner/graph/nodes/writer.py" = ["RUF001", "RUF002", "RUF003"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["travel_planner"]

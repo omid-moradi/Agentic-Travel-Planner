@@ -1,9 +1,9 @@
 # Agentic Travel Planner
 
-> **Work in progress.** Phases 0 and 1 of 10 are complete. The product core (schemas, the
+> **Work in progress.** Phases 0, 1 and 2 of 10 are complete. The product core (schemas, the
 > LangGraph workflow, the optimizer and the data providers) is not written yet - what exists
-> today is the foundation: typed configuration, a provider-agnostic model layer, structured
-> logging, a CLI and a test suite. See [`plan-mode-cline.md`](plan-mode-cline.md) for the plan,
+> today is the foundation plus a working offline planner: typed schemas, a LangGraph workflow
+> with nine parallel research nodes, a deterministic optimizer and validator, and a CLI. See [`plan-mode-cline.md`](plan-mode-cline.md) for the plan,
 > [`STATUS-P0.md`](STATUS-P0.md) and [`STATUS-P1.md`](STATUS-P1.md) for honest status.
 
 An AI travel product that plans and manages an **entire trip** - for **domestic Iran trips and
@@ -91,17 +91,24 @@ To run completely offline with no keys at all, set `LLM_PROVIDER=mock`.
 ```bash
 travel-planner config      # effective configuration, secrets masked
 travel-planner ping "What is the best time to visit Kashgar?"
+travel-planner plan --demo --nights 3 --start 2026-11-01   # offline Tehran -> Shiraz
+travel-planner plan Shiraz --nights 2 --language en        # single-city plan, English
 travel-planner --help
 ```
+
+The `plan` command runs the whole LangGraph workflow offline: nine parallel research
+nodes over curated fixtures, a deterministic optimizer (clustering + 2-opt routing,
+workload caps, Toman budgeting), a code validator and a Persian/English writer.
+No API key and no network are required.
 
 ### Run the checks
 
 ```bash
 ruff check src tests scripts   # lint
 mypy                           # strict type check
-pytest -q                      # offline suite (66 tests)
+pytest -q                      # offline suite (107 tests)
 pytest -m live                 # opt-in tests that call the real gateway (7 tests)
-pytest -q --cov                # with coverage (currently 88%)
+pytest -q --cov                # with coverage (currently 82%)
 pre-commit run --all-files     # all of the above plus secret scanning
 ```
 
@@ -128,8 +135,8 @@ legacy_prototype/      the original AutoGen spike, deleted in phase 4
 |---|---|---|
 | 0 | Audit, ADRs, architecture, plan | **Done** |
 | 1 | Core foundation, LLM migration, quality gates | **Done** |
-| 2 | Agentic core + optimizer | Next |
-| 3 | Data providers (scraping-first) | Planned |
+| 2 | Agentic core + optimizer | **Done** |
+| 3 | Data providers (scraping-first) | Next |
 | 4 | Persistence + API | Planned |
 | 5 | Web app | Planned |
 | 6 | Monetization | Planned |
@@ -141,8 +148,11 @@ Honest status, including anything unverified, is recorded in each `STATUS-P<n>.m
 
 ## Known limitations right now
 
-- **There is no trip planning yet.** No `TripRequest`, no itinerary, no graph. Phases 2+.
-- **No data providers yet.** No places, hotels, weather or routes. Phase 3.
+- **Offline planning works; live data does not.** The graph plans a valid Tehran -> Shiraz
+  trip from curated fixtures, but there are no real providers yet (places, weather, routes,
+  hotels all come from the fixture set). Phase 3.
+- **Days within one city repeat the same venues** because the fixture set has only 4-5
+  venues per city. Real providers will diversify it.
 - **No API, database or web app yet.** Phases 4 and 5.
 - Docker, PostgreSQL and Redis were unavailable in the development environment, so those
   parts are planned but unbuilt.
