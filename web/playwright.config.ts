@@ -5,6 +5,9 @@ import { defineConfig } from "@playwright/test";
  * Playwright itself (webServer entries), so one command runs the whole stack.
  */
 
+// Cross-platform interpreter (overridable), used for both server boot steps.
+const py = process.env.API_PYTHON ?? "python";
+
 export default defineConfig({
   testDir: "./e2e",
   timeout: 120_000,
@@ -16,9 +19,14 @@ export default defineConfig({
   },
   webServer: [
     {
-      // Cross-platform: `python` on PATH (overridable with API_PYTHON), so the
-      // same config boots the API on Windows dev and Linux CI runners.
-      command: `${process.env.API_PYTHON ?? "python"} -m uvicorn travel_planner.api.app:app --port 8000`,
+      // `python` on PATH works on Windows dev and Linux CI alike. The e2e
+      // SQLite file lives in ./.pytest_tmp which does NOT exist on a fresh
+      // checkout (the pytest fixtures create it, but nothing does for e2e),
+      // and the API exits at startup when the parent dir is missing - so the
+      // dir is created here, cross-platform, before uvicorn boots.
+      command:
+        `${py} -c "import pathlib; pathlib.Path('.pytest_tmp').mkdir(exist_ok=True)"` +
+        ` && ${py} -m uvicorn travel_planner.api.app:app --port 8000`,
       cwd: "..",
       url: "http://localhost:8000/api/v1/health",
       reuseExistingServer: true,
