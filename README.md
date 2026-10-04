@@ -1,162 +1,124 @@
 # Agentic Travel Planner
 
-> **Work in progress.** Phases 0-8 of 10 are complete. The product core (schemas, the
-> LangGraph workflow, the optimizer and the data providers) is not written yet - what exists
-> today is the foundation plus a working offline planner: typed schemas, a LangGraph workflow
-> with nine parallel research nodes, a deterministic optimizer and validator, and a CLI. See [`plan-mode-cline.md`](plan-mode-cline.md) for the plan,
-> [`STATUS-P0.md`](STATUS-P0.md) and [`STATUS-P1.md`](STATUS-P1.md) for honest status.
+An AI product that plans and manages an **entire trip** - for **domestic Iran trips and
+international trips**, in **Persian (RTL) and English** - built on a deterministic,
+source-grounded core.
 
-An AI travel product that plans and manages an **entire trip** - for **domestic Iran trips and
-international trips**, in **Persian (RTL) and English**.
+**Status: all 10 phases complete.** See [FINAL-REPORT.md](FINAL-REPORT.md) for the honest
+summary (what is verified, what is implemented-but-unverified, and the known limitations),
+or the per-phase gates in `STATUS-P0.md` ... `STATUS-P9.md`.
 
----
+## Features
 
-## What it will do
+**Before the trip** - natural-language request -> a typed `TripRequest`; a day-by-day
+itinerary with optimized routes, per-day and total budgets in labelled Toman; a packing
+list and document checklist; advisory entry requirements for international travel (always
+with the "verify with official source" warning); seasonal planning.
 
-**Before the trip**
-- Natural-language request -> a typed `TripRequest` (asking only high-value questions).
-- Destination research, day-by-day itinerary, budget breakdown, hotel and transport options.
-- Packing list and document checklist.
-- Entry requirements for international travel (visa, passport validity, insurance, health),
-  always sourced and dated, always with a "verify with official source" warning.
-- Seasonal and weather-aware planning, clearly distinguishing forecast from climate averages.
+**During the trip (Live Mode)** - today's plan with next-stop hints; a one-tap re-plan for
+rain, a closed venue, running late, tiredness or a budget change (the reason is recorded on
+the agent trace); an expense tracker with currency conversion and a budget burn-down; an
+offline-capable PWA (service worker caching).
 
-**During the trip (Live Mode)**
-- Today's plan, next-stop navigation, offline-friendly cached itinerary (PWA).
-- One-tap "Re-plan today" for rain, a closed venue, running late, tiredness or a budget change.
-- Expense tracker with currency conversion and budget burn-down.
+**After the trip** - the full plan history (itinerary versions are append-only), a public
+read-only share link, ICS and PDF exports.
 
-**After the trip**
-- Trip summary, expense split between travelers, shareable public trip page, PDF/ICS export.
+## The four differentiators (all genuinely implemented)
 
-## Core differentiators
-
-| Differentiator | What it means |
+| Differentiator | How it works |
 |---|---|
-| Source-grounded facts | Every external fact is `confirmed`, `estimated`, `inferred` or `unavailable`, with a source and a retrieval time. Nothing is invented. |
-| Deterministic optimization | Routes, opening hours and budgets are computed in Python from real coordinates and travel times - never guessed by the model. |
-| Conversational edits | "cheaper", "remove museums", "rain on day 3", "add a day" patch only the affected parts, then revalidate. |
-| Transparent agent trace | Structured steps and timings. No chain-of-thought is ever shown or stored. |
+| Source-grounded facts | Every external fact carries `confirmed / estimated / inferred / unavailable` plus a source and a retrieval time. Unavailable data is labelled unavailable - it is never invented. |
+| Deterministic optimization | Routes, times, workload caps and budgets are computed by Python (clustering, nearest-neighbour + 2-opt, the 8h cap). The LLM never guesses a plan. |
+| Conversational edits | One-tap re-plan reasons are typed, validated and traced; each run is a new version, history is never overwritten. |
+| Transparent agent trace | Structured steps with timings. The chain-of-thought is stripped at the model-client boundary and never stored or shown. |
 
-## Architecture (summary)
+## Architecture (short version)
 
-- **LangGraph** orchestration over a typed, checkpointed `TravelState` (phase 2).
-- **Provider-agnostic LLM layer** - any OpenAI-compatible endpoint, plus Ollama and an
-  offline `mock` provider. No vendor lock-in.
-- **Scraping-first, API-ready providers** - every capability is a `Protocol` with a
-  configurable fallback chain, so an official API can replace a scraper by changing one env
-  line (phase 3).
-- **FastAPI + PostgreSQL + Redis** modular monolith, with SQLite and in-process fallbacks so
-  the test suite runs anywhere (phase 4).
-- **Next.js** web app with full RTL Persian support (phase 5).
+- **LangGraph** workflow over a typed, checkpointed `TravelState` - 9 parallel research
+  nodes -> a deterministic planner/validator -> a bounded replan loop -> a Persian/English
+  writer. Full detail: [docs/agents.md](docs/agents.md).
+- **Provider-agnostic LLM layer**: `apmix | openai | openai_compatible | ollama | mock`.
+  In `mock` the whole product runs offline with zero keys.
+- **Scraping-first, API-ready providers**: every capability is a `Protocol` with an
+  env-driven fallback chain ([docs/data-sources.md](docs/data-sources.md)); the shared
+  `ScraperClient` enforces SSRF guards, robots.txt, rate limits, circuit breakers,
+  caching and sanitization in one place.
+- **FastAPI + SQLAlchemy** (SQLite for zero-setup, Postgres in production), one error
+  envelope, request IDs, Prometheus metrics at `/api/v1/metrics`.
+- **Next.js 16** web app with fa/en, full RTL, Persian digits and a service worker.
+- Full docs: [docs/architecture.md](docs/architecture.md),
+  [docs/api.md](docs/api.md), [docs/deployment.md](docs/deployment.md),
+  [docs/security.md](docs/security.md), [docs/monetization.md](docs/monetization.md),
+  [docs/iran-mode.md](docs/iran-mode.md), [docs/evaluation.md](docs/evaluation.md),
+  [docs/tools.md](docs/tools.md).
 
-Full details: [`docs/architecture.md`](docs/architecture.md).
-
-## Getting started
-
-### Requirements
-
-Python 3.11+ (developed and tested on 3.13.5).
-
-### Install
-
-```bash
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1          # Windows
-pip install -e ".[dev]"
-```
-
-### Configure
+## Quick start (offline demo - no keys needed)
 
 ```bash
-copy .env.example .env                # Windows
-cp .env.example .env                  # macOS / Linux
+python -m venv .venv && .venv\Scripts\activate     # Windows
+pip install -e ".[dev,api]"
+copy .env.example .env                            # set JWT_SECRET at minimum
+set LLM_PROVIDER=mock
+
+uvicorn travel_planner.api.app:app --port 8000    # API  -> http://localhost:8000
+
+cd web && npm ci && npm run build && npm start     # web  -> http://localhost:3000
 ```
 
-Then set at least:
-
-```dotenv
-LLM_PROVIDER=apmix
-LLM_BASE_URL=https://api.apmix.ai/v1
-LLM_API_KEY=your_key_here
-LLM_MODEL=deepseek/deepseek-v4-flash-free
-```
-
-`.env` is git-ignored and a pre-commit hook blocks live credentials from being committed.
-
-To run completely offline with no keys at all, set `LLM_PROVIDER=mock`.
-
-### Use the CLI
+Or plan from the CLI:
 
 ```bash
-travel-planner config      # effective configuration, secrets masked
-travel-planner ping "What is the best time to visit Kashgar?"
 travel-planner plan --demo --nights 3 --start 2026-11-01   # offline Tehran -> Shiraz
-travel-planner plan Shiraz --nights 2 --language en        # single-city plan, English
-travel-planner --help
 ```
 
-The `plan` command runs the whole LangGraph workflow offline: nine parallel research
-nodes over curated fixtures, a deterministic optimizer (clustering + 2-opt routing,
-workload caps, Toman budgeting), a code validator and a Persian/English writer.
-No API key and no network are required.
-
-### Run the checks
+## Docker (full stack)
 
 ```bash
-ruff check src tests scripts   # lint
-mypy                           # strict type check
-pytest -q                      # offline suite (107 tests)
-pytest -m live                 # opt-in tests that call the real gateway (7 tests)
-pytest -q --cov                # with coverage (currently 82%)
-pre-commit run --all-files     # all of the above plus secret scanning
+export JWT_SECRET=<a long random string>
+docker compose up --build        # api :8000, web :3000, postgres, redis
 ```
 
-### Layout
+Boots in offline demo mode by default. See [docs/deployment.md](docs/deployment.md)
+for leaving demo mode and the production checklist.
 
-```text
-src/travel_planner/
-  errors.py            shared exception hierarchy
-  config/settings.py   typed env settings, no import-time validation
-  config/regions.py    Iran / international market profiles
-  llm/factory.py       provider-agnostic model layer
-  logging_config.py    structured logs with secret and PII redaction
-  cli.py               command line entry point
-docs/                  audit, decisions (ADRs), architecture, data sources, reports
-tests/unit             offline tests
-tests/integration      opt-in live provider tests
-evaluation/            scenario harness (phase 8)
-legacy_prototype/      the original AutoGen spike, deleted in phase 4
+## Testing and evaluation
+
+```bash
+ruff check src tests scripts     # lint
+mypy                             # strict types
+pytest -q -m "not live"          # 211 offline tests
+pytest -m live                   # 12 opt-in tests against real providers
+npx playwright test              # the golden path (boots the stack itself, from web/)
+python evaluation/runner.py      # the evaluation gate: 25 scenarios
 ```
 
-## Development status
+Real numbers: **211 offline tests, 25/25 evaluation scenarios (100%), mean scenario
+latency 70.5 ms offline**, and a 12-test live suite covering the apmix gateway,
+Open-Meteo and OSRM. The committed evaluation report lives in
+`evaluation/reports/`.
 
-| Phase | Scope | Status |
-|---|---|---|
-| 0 | Audit, ADRs, architecture, plan | **Done** |
-| 1 | Core foundation, LLM migration, quality gates | **Done** |
-| 2 | Agentic core + optimizer | **Done** |
-| 3 | Data providers (scraping-first) | **Done** |
-| 4 | Persistence + API | **Done** |
-| 5 | Web app | **Done** |
-| 6 | Monetization | **Done** |
-| 7 | Whole-trip features | **Done** |
-| 8 | Observability, eval, MCP | **Done** |
-| 9 | DevOps, docs, final report | Next |
+## Environment variables
 
-Honest status, including anything unverified, is recorded in each `STATUS-P<n>.md`.
+All configuration is env-driven (see `.env.example`). The essentials:
 
-## Known limitations right now
+| Variable | Purpose |
+|---|---|
+| `LLM_PROVIDER` | `mock` (offline), `apmix`, `openai`, `openai_compatible`, `ollama` |
+| `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL` | the gateway credentials (never committed) |
+| `DATABASE_URL` | SQLite by default; `postgresql+asyncpg://...` in production |
+| `JWT_SECRET` | **must** be set to a long random string outside local dev |
+| `ADMIN_BOOTSTRAP_EMAIL` | grants the admin role to the first matching account |
+| `<CAPABILITY>_PROVIDERS` | the per-capability fallback chains |
+| `GUEST_TRIAL_ENABLED` | the 1-free-plan guest trial on/off |
 
-- **Offline planning works; live data does not.** The graph plans a valid Tehran -> Shiraz
-  trip from curated fixtures, but there are no real providers yet (places, weather, routes,
-  hotels all come from the fixture set). Phase 3.
-- **Days within one city repeat the same venues** because the fixture set has only 4-5
-  venues per city. Real providers will diversify it.
-- **The web app covers the core flow** (landing, request, itinerary with provenance badges,
-  re-plan, share, history, fa/en with RTL). Map, Live Mode and expenses arrive in later phases.
-- Docker, PostgreSQL and Redis were unavailable in the development environment, so those
-  parts are planned but unbuilt.
+## Roadmap
+
+- Richer provider-backed venues (indoor/outdoor attributes) so re-plan reasons
+  can swap venues instead of re-running the whole plan.
+- OAuth (Google), referral credits and OG share images.
+- The web checklist/expense screens on top of the finished API.
+- Redis-backed distributed rate limiting and caching.
+- A real OTLP collector for the already-emitted spans.
 
 ## License
 
@@ -164,6 +126,7 @@ To be decided. All rights reserved until a license is chosen.
 
 ## Legal note
 
-Visa and entry-requirement information is advisory only and must be verified with an official
-source before travel. Scraping is performed responsibly under each site's robots.txt and recorded
-in `docs/data-sources.md`. Payment and legal templates are marked "needs legal review".
+Visa and entry-requirement information is advisory only and must be verified with an
+official source before travel. Scraping follows each site's robots.txt and is recorded in
+`docs/data-sources.md`; enabling a scraper against a real site requires the owner's
+review of that site's terms. Privacy and ToS templates need legal review.
