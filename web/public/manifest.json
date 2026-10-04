@@ -1,0 +1,19 @@
+{
+  "name": "Agentic Travel Planner",
+  "short_name": "Travel Planner",
+  "description": "Plan and manage an entire trip - domestic Iran and international - in Persian and English.",
+  "start_url": "/trips",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#047857",
+  "dir": "rtl",
+  "lang": "fa",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
