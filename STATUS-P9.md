@@ -40,12 +40,14 @@ unverified items. **Passed.**
 | Web | `npm run lint` + `npm run build` | **clean** |
 | Golden path | `npx playwright test` | **1 passed** |
 | Docker stack | `docker compose up --build` | **verified**: images built (api 277MB, web 234MB), postgres/redis healthy, api container `(healthy)`, web 200, `POST /trips` → 201 `done`, second plan → 402 quota envelope, `GET /trips` lists the trip |
+| CI on GitHub Actions | push to `main` | **verified**: run #4 (37230936920, commit `e2f3fed`) — both jobs green: python (ruff, mypy strict, offline suite, evaluation gate, pip-audit) and web (lint, build, Playwright golden path with the API booted by Playwright on Linux) |
 
 ## Implemented but NOT verified
 
-| Item | Why | How to verify |
-|---|---|---|
-| CI workflow execution | GitHub Actions runs only on a push; the workflow mirrors the exact local gates that all passed | push to GitHub and read the run |
+None — the last item (CI execution) was verified above. Everything left
+(Stripe/Zarinpal live calls, an OTLP collector, a live-gateway evaluation
+run, real-site scraping) is gated on credentials or owner approval, not on
+the codebase; see FINAL-REPORT.md section 4.
 
 ## Fixes found by actually verifying Docker
 
@@ -60,6 +62,16 @@ unverified items. **Passed.**
   and the local-dev relative SQLite path broke the container
   (`unable to open database file`). `LLM_*` still flows through, so the
   real gateway key from `.env` works inside the stack.
+
+## Fixes found by actually running CI
+
+- The Playwright webServer command was Windows-only
+  (`.venv\Scripts\python.exe`); it is now `${API_PYTHON ?? "python"}
+  -m uvicorn` and the web job installs Python 3.13 + `.[api]` first.
+- On a fresh checkout `.pytest_tmp` does not exist, the e2e `DATABASE_URL`
+  pointed into it, and the API exited at startup — the webServer command
+  now creates the directory before uvicorn boots (verified by deleting
+  `.pytest_tmp` locally and passing the golden path).
 
 ## Final state of the project
 

@@ -43,6 +43,7 @@ and the orchestration rebuilt on LangGraph over a typed, checkpointed `TravelSta
 | Playwright golden path | **1 passed** in a real browser against the real API: create → re-plan → share |
 | MCP stdio round trip | initialize → tools/list → `plan_trip` returned a valid 2-day plan; unknown methods → −32601 |
 | Docker full stack | `docker compose up --build` | **verified 2026-10-04**: both images built (api 277MB, web 234MB), postgres+redis healthy, api container `(healthy)`, web 200, `POST /trips` → 201 `done`, second plan → 402 quota envelope, `GET /trips` lists the trip |
+| CI on GitHub Actions | push to `main` | **verified**: run 37230936920 (commit `e2f3fed`) — both jobs green: python (ruff, mypy strict, offline suite, evaluation gate, pip-audit) and web (lint, build, Playwright golden path booting the API itself on Linux). Two real bugs found and fixed on the way: a Windows-only webServer command, and the missing `.pytest_tmp` dir on fresh checkouts |
 
 ## 4. Implemented but NOT verified (explicit)
 
