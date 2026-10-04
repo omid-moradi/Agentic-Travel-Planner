@@ -30,10 +30,6 @@ node_modules/
 /web/test-results/
 npm-debug.log*
 
-# --- evaluation output ---
-/evaluation/reports/*.json
-/evaluation/reports/*.md
-!/evaluation/reports/.gitkeep
 
 # --- editors / OS ---
 .vscode/

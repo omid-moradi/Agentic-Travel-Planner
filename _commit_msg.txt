@@ -1,0 +1,39 @@
+feat(observability): OTLP spans, metrics, evaluation, failure injection, MCP
+
+Phase 8 of the plan-mode-cline.md roadmap. The gate - an evaluation report
+with real numbers plus graceful failure injection - is met.
+
+Observability (dependency-free by design):
+- Tracer emitting OpenTelemetry-data-model spans (trace/span ids,
+  unix-nano timestamps, attributes, ok/error status) through the
+  structured logger; an OTLP exporter can subscribe without touching callers
+- MetricsRegistry with thread-safe counters/gauges in Prometheus text
+  format at GET /api/v1/metrics; the HTTP middleware counts every request
+  with method/path/status labels
+
+Evaluation harness (evaluation/):
+- 25 typed scenarios across 7 categories (iran_domestic, multi_city,
+  budget, incomplete, international, live_mode, edge_case) including
+  Nowruz peak season, a 30-night trip, 50 travelers, impossible budgets,
+  unknown cities, past and far-future dates
+- per-scenario metrics: plan produced, validity, day count, city coverage,
+  8h workload cap, budget consistency, warning behaviour, safe fallback,
+  latency; JSON + Markdown reports; fully reproducible (mock LLM)
+
+Failure-injection suite (11 tests):
+- provider timeout, empty results, a fully dead chain (naming every
+  provider tried), malformed JSON, HTTP 429, circuit open/half-open,
+  webhook replay idempotency, unknown live-mode reason, malformed bodies,
+  missing-trip subresources, and health/metrics surviving an outage
+
+MCP server (travel_planner.mcp.server):
+- minimal dependency-free JSON-RPC 2.0 stdio server speaking the MCP
+  protocol basics (initialize, tools/list, tools/call) exposing plan_trip
+  (the real offline graph) and get_health; tool failures return JSON-RPC
+  errors instead of crashing; the core never imports it - enforced by a test
+
+Verified: ruff clean, mypy strict clean across 70 files, 211 offline
+tests passing, the gate - 25/25 scenarios at 100% with real latencies
+(min 56.7, mean 70.5, max 112.4 ms) committed in evaluation/reports/ -
+11 failure injection tests, 8 MCP tests, and a live stdio round trip
+(initialize, tools/list, plan_trip returning a valid 2-day plan).
