@@ -238,3 +238,21 @@ class WebhookEvent(IdMixin, Base):
     event_type: Mapped[str] = mapped_column(String(64))
     payload: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     processed_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+# ----------------------------------------------------------------- expenses
+class Expense(IdMixin, Base):
+    """One recorded expense during a trip (Live Mode burn-down)."""
+
+    __tablename__ = "expenses"
+    __table_args__ = (Index("ix_expenses_trip_created", "trip_id", "created_at"),)
+
+    trip_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("trips.id", ondelete="CASCADE"))
+    day_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    category: Mapped[str] = mapped_column(String(32))  # food|transport|hotel|ticket|other
+    title: Mapped[str] = mapped_column(String(200))
+    amount: Mapped[float] = mapped_column(Float)
+    currency: Mapped[str] = mapped_column(String(8), default="TOMAN")
+    #: Amount normalised to the trip currency at recording time (documented rate).
+    amount_in_trip_currency: Mapped[float] = mapped_column(Float)
+    note: Mapped[str] = mapped_column(Text, default="")

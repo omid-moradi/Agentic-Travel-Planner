@@ -90,6 +90,7 @@ def create_app(*, database_url: str | None = None, rate_limit: int = 60) -> Fast
         share,
         trips,
         usage,
+        whole_trip,
     )
 
     app = FastAPI(
@@ -138,6 +139,7 @@ def create_app(*, database_url: str | None = None, rate_limit: int = 60) -> Fast
         return response
 
     app.include_router(trips.router, prefix=API_PREFIX)
+    app.include_router(whole_trip.router, prefix=API_PREFIX)
     app.include_router(auth.router, prefix=API_PREFIX)
     app.include_router(billing.router, prefix=API_PREFIX)
     app.include_router(affiliate.router, prefix=API_PREFIX)

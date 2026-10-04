@@ -1,6 +1,6 @@
 # Agentic Travel Planner
 
-> **Work in progress.** Phases 0-6 of 10 are complete. The product core (schemas, the
+> **Work in progress.** Phases 0-7 of 10 are complete. The product core (schemas, the
 > LangGraph workflow, the optimizer and the data providers) is not written yet - what exists
 > today is the foundation plus a working offline planner: typed schemas, a LangGraph workflow
 > with nine parallel research nodes, a deterministic optimizer and validator, and a CLI. See [`plan-mode-cline.md`](plan-mode-cline.md) for the plan,
@@ -140,8 +140,8 @@ legacy_prototype/      the original AutoGen spike, deleted in phase 4
 | 4 | Persistence + API | **Done** |
 | 5 | Web app | **Done** |
 | 6 | Monetization | **Done** |
-| 7 | Whole-trip features | Next |
-| 8 | Observability, eval, MCP | Planned |
+| 7 | Whole-trip features | **Done** |
+| 8 | Observability, eval, MCP | Next |
 | 9 | DevOps, docs, final report | Planned |
 
 Honest status, including anything unverified, is recorded in each `STATUS-P<n>.md`.
