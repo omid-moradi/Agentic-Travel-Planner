@@ -17,24 +17,22 @@ RUN useradd --create-home --uid 1000 planner
 WORKDIR /app
 
 COPY --from=builder /dist/*.whl /tmp/
-RUN pip install --no-cache-dir /tmp/*.whl \
-    "uvicorn[standard]" \
-    "sqlalchemy[asyncio]" \
-    "aiosqlite" \
-    "asyncpg" \
-    "email-validator" \
-    "pyjwt" \
-    && rm -f /tmp/*.whl
+# The wheel alone does not pull the API stack - fastapi/uvicorn live in the
+# "api" extra; pyjwt/email-validator serve auth and are not part of it.
+RUN set -eux; \
+    WHEEL=$(ls /tmp/*.whl); \
+    pip install --no-cache-dir "${WHEEL}[api]" "pyjwt" "email-validator"; \
+    rm -f /tmp/*.whl
+
+# The SQLite file lives here when the default (no-daemon) mode is used.
+# Created as root (WORKDIR /app is root-owned), then handed to the app user.
+RUN mkdir -p /app/data && chown planner:planner /app/data
 
 USER planner
 ENV PYTHONUNBUFFERED=1 \
     APP_ENV=production \
     LLM_PROVIDER=mock \
-    DATABASE_URL=sqlite+aiosqlite:///./data/travel_planner.db
-
-# The SQLite file lives here when the default (no-daemon) mode is used.
-RUN mkdir -p /app/data
-VOLUME /app/data
+    DATABASE_URL=sqlite+aiosqlite:////app/data/travel_planner.db
 
 EXPOSE 8000
 

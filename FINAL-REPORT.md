@@ -42,12 +42,12 @@ and the orchestration rebuilt on LangGraph over a typed, checkpointed `TravelSta
 | Evaluation (the phase 8 gate) | **25/25 scenarios, 100%**, mean 70.5 ms offline; the report with real numbers is committed in `evaluation/reports/` |
 | Playwright golden path | **1 passed** in a real browser against the real API: create → re-plan → share |
 | MCP stdio round trip | initialize → tools/list → `plan_trip` returned a valid 2-day plan; unknown methods → −32601 |
+| Docker full stack | `docker compose up --build` | **verified 2026-10-04**: both images built (api 277MB, web 234MB), postgres+redis healthy, api container `(healthy)`, web 200, `POST /trips` → 201 `done`, second plan → 402 quota envelope, `GET /trips` lists the trip |
 
 ## 4. Implemented but NOT verified (explicit)
 
 | Item | Why | How to verify |
 |---|---|---|
-| Docker images + compose build | the Docker daemon was not running in the dev environment | `docker compose up --build` |
 | Stripe / Zarinpal live calls | no credentials exist; adapters are disabled stubs by design | provide test-mode keys, run a checkout + webhook round trip |
 | Service-worker offline behaviour | Playwright cannot drive airplane mode | open a trip page, go offline in DevTools, reload |
 | An OTLP collector receiving the spans | spans are emitted in the OTLP data model via structured logs; no collector ran here | run any OTel collector against the log stream |
@@ -89,7 +89,7 @@ pytest -m live                                       # needs the gateway key
 npx playwright test                                 # from web/
 python evaluation/runner.py                         # PYTHONPATH=src;.
 
-# docker (build NOT verified here - see section 4)
+# docker (verified: compose up --build, health checks, an end-to-end trip)
 export JWT_SECRET=<long random string>
 docker compose up --build
 

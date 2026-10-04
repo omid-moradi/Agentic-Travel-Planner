@@ -1,0 +1,19 @@
+# Keep the API build context minimal and platform-clean.
+.git
+.github
+.venv
+**/__pycache__
+**/*.pyc
+.pytest_cache
+data
+*.db
+*.sqlite*
+tests
+evaluation
+docs
+scripts
+web
+.env
+_commit_msg.txt
+STATUS-P*.md
+plan-mode-cline.md

@@ -29,9 +29,17 @@ SQLite). To leave demo mode set `LLM_PROVIDER=apmix` (or `openai_compatible`
 / `ollama`), the matching key and base URL, and optionally point
 `DATABASE_URL` at the Postgres service.
 
-**Status: the Dockerfiles and compose file are committed but the build was not
-executed in the development environment (the Docker daemon was not running).
-See STATUS-P9.md.**
+**Status: verified.** `docker compose up --build` was executed end-to-end on
+2026-10-04: both images built, postgres/redis healthy, the api container
+reported `(healthy)`, the web served 200, a real trip POST returned 201 with
+a `done` itinerary, the guest quota returned the 402 envelope on the second
+plan, and the trip appeared in `GET /trips`.
+
+**Caveat:** Docker Compose reads the project `.env` for variable substitution,
+so local-dev values for `LLM_*` (including your real API key) flow into the
+containers. `DATABASE_URL` is deliberately **not** substituted in the compose
+file for that reason — a host-oriented relative SQLite path would break inside
+the container; edit the compose line itself to switch to Postgres.
 
 ## Production checklist
 

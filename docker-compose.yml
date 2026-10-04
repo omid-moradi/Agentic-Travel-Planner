@@ -38,8 +38,12 @@ services:
       LLM_BASE_URL: ${LLM_BASE_URL:-https://api.apmix.ai/v1}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_MODEL: ${LLM_MODEL:-deepseek/deepseek-v4-flash-free}
-      # SQLite by default; switch to the Postgres service for production.
-      DATABASE_URL: ${DATABASE_URL:-sqlite+aiosqlite:///./data/travel_planner.db}
+      # SQLite fallback, pinned to the container-owned data dir. Deliberately
+      # NOT ${DATABASE_URL:-...}: Compose reads the project .env for variable
+      # substitution, and a host-oriented relative path from local dev would
+      # break inside the container. Switch to Postgres by editing this line:
+      #   DATABASE_URL: postgresql+asyncpg://planner:planner@postgres/travel_planner
+      DATABASE_URL: sqlite+aiosqlite:////app/data/travel_planner.db
       REDIS_URL: ${REDIS_URL:-}
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in the environment}
       ADMIN_BOOTSTRAP_EMAIL: ${ADMIN_BOOTSTRAP_EMAIL:-}

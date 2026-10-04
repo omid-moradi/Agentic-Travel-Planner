@@ -1,0 +1,7 @@
+# The host node_modules (Windows) and build output must never enter the image.
+node_modules
+.next
+test-results
+playwright-report
+e2e-results
+.env*
