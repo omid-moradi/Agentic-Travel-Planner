@@ -1,0 +1,81 @@
+# CI for the Agentic Travel Planner.
+#
+# Python gates: ruff, mypy (strict), the offline pytest suite, the evaluation
+# gate, and a dependency audit.
+# Web gates: lint, build, and the Playwright golden path (with the API booted
+# by Playwright itself).
+#
+# Live-provider tests are excluded everywhere (no credentials in CI); they
+# run locally with `pytest -m live`.
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,api]"
+
+      - name: Lint (ruff)
+        run: ruff check src tests scripts
+
+      - name: Types (mypy strict)
+        run: mypy
+
+      - name: Tests (offline suite)
+        run: pytest -m "not live" -q
+
+      - name: Evaluation gate
+        env:
+          LLM_PROVIDER: mock
+          PYTHONPATH: "src:."
+        run: python evaluation/runner.py
+
+      - name: Dependency audit
+        run: pip-audit --skip-editable
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Golden path (boots the API itself)
+        env:
+          LLM_PROVIDER: mock
+        run: npx playwright test

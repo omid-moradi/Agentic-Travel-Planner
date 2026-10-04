@@ -1,0 +1,67 @@
+# Agentic Travel Planner - the full stack.
+#
+#   docker compose up --build
+#
+# The api starts in offline demo mode (LLM_PROVIDER=mock, SQLite) so the whole
+# stack works with zero keys. Point DATABASE_URL at Postgres (below) and set
+# the real LLM_* variables to leave demo mode.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: planner
+      POSTGRES_PASSWORD: planner
+      POSTGRES_DB: travel_planner
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U planner -d travel_planner"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build: .
+    environment:
+      APP_ENV: production
+      # Demo mode by default; swap the values below to leave it.
+      LLM_PROVIDER: ${LLM_PROVIDER:-mock}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.apmix.ai/v1}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-deepseek/deepseek-v4-flash-free}
+      # SQLite by default; switch to the Postgres service for production.
+      DATABASE_URL: ${DATABASE_URL:-sqlite+aiosqlite:///./data/travel_planner.db}
+      REDIS_URL: ${REDIS_URL:-}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in the environment}
+      ADMIN_BOOTSTRAP_EMAIL: ${ADMIN_BOOTSTRAP_EMAIL:-}
+      GUEST_TRIAL_ENABLED: ${GUEST_TRIAL_ENABLED:-true}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./web
+      args:
+        # Inside the compose network the api is reachable by service name.
+        NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-http://localhost:8000}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  postgres-data:
