@@ -87,6 +87,7 @@ def create_app(*, database_url: str | None = None, rate_limit: int = 60) -> Fast
         auth,
         billing,
         health,
+        observability,
         share,
         trips,
         usage,
@@ -128,6 +129,13 @@ def create_app(*, database_url: str | None = None, rate_limit: int = 60) -> Fast
         start = time.perf_counter()
         response = await call_next(request)
         elapsed_ms = (time.perf_counter() - start) * 1000
+        from travel_planner.observability import metrics
+        metrics.inc(
+            "api_requests_total",
+            method=request.method,
+            path=request.url.path,
+            status=str(response.status_code),
+        )
         response.headers["X-Request-ID"] = request_id
         logger.info(
             "%s %s -> %d (%.1fms)",
@@ -147,6 +155,7 @@ def create_app(*, database_url: str | None = None, rate_limit: int = 60) -> Fast
     app.include_router(usage.router, prefix=API_PREFIX)
     app.include_router(share.router, prefix=API_PREFIX)
     app.include_router(health.router, prefix=API_PREFIX)
+    app.include_router(observability.router, prefix="/api/v1")
     return app
 
 
