@@ -227,11 +227,13 @@ class TestLiveMode:
             f"/api/v1/trips/{trip_id}/replan-today", json={"reason": "rain"}
         )
         assert replan.status_code == 200
-        assert replan.json() == {
-            "replanned": True,
-            "reason": "rain",
-            "trip_status": "done",
-        }
+        body = replan.json()
+        assert body["replanned"] is True
+        assert body["reason"] == "rain"
+        assert body["trip_status"] == "done"
+        # A trip without an explicit start date starts today, so the
+        # reason-aware patch applies to today's day.
+        assert body["day_patched"] is True
 
         # The reason is auditable on the trace.
         trace = await client.get(f"/api/v1/trips/{trip_id}/trace")
@@ -239,6 +241,48 @@ class TestLiveMode:
             run for run in trace.json()["items"] if run["node"] == "replan_today"
         )
         assert rain_run["payload"]["reason"] == "rain"
+        assert rain_run["payload"]["day_patched"] is True
+
+    async def test_replan_today_patches_only_today(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        """The reason patch touches today's day; other days keep their plan."""
+        from datetime import date as date_type
+
+        today = date_type.today().isoformat()
+        trip_id = await _create_trip(client, start_date=today, duration_nights=2)
+        before = (await client.get(f"/api/v1/trips/{trip_id}/itinerary")).json()
+        before_days = before["payload"]["days"]
+
+        replan = await client.post(
+            f"/api/v1/trips/{trip_id}/replan-today", json={"reason": "tired"}
+        )
+        assert replan.status_code == 200
+        assert replan.json()["day_patched"] is True
+
+        after = (await client.get(f"/api/v1/trips/{trip_id}/itinerary")).json()
+        after_days = after["payload"]["days"]
+        assert after["version"] == before["version"] + 1
+
+        # Today is a lighter day (at most three activities).
+        today_day = next(d for d in after_days if d["date"] == today)
+        assert len(today_day["activities"]) <= 3
+
+        # Every other day is exactly the day the traveller already had.
+        for old_day, new_day in zip(before_days, after_days, strict=True):
+            if old_day["date"] != today:
+                assert new_day == old_day
+
+    async def test_replan_today_full_replan_when_today_is_not_a_trip_day(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        """No trip day today: the fresh full plan is stored, no day patch."""
+        trip_id = await _create_trip(client, start_date="2026-12-01")
+        replan = await client.post(
+            f"/api/v1/trips/{trip_id}/replan-today", json={"reason": "tired"}
+        )
+        assert replan.status_code == 200
+        assert replan.json()["day_patched"] is False
 
     async def test_unknown_replan_reason_rejected(
         self, client: httpx.AsyncClient

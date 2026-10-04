@@ -30,7 +30,7 @@ Rate limiting: in-process per-IP (Redis drops in behind the same interface).
 | GET | `/trips/{id}/export.ics` | RFC 5545 calendar download |
 | GET | `/trips/{id}/export.pdf` | one-page PDF download |
 | GET | `/trips/{id}/today` | Live Mode: today's plan + next-stop + re-plan reasons |
-| POST | `/trips/{id}/replan-today` | one-tap re-plan: `{"reason": "rain|closed_venue|running_late|tired|budget_changed"}`; the reason is recorded on the trace |
+| POST | `/trips/{id}/replan-today` | reason-aware, day-scoped re-plan: `{"reason": "rain|closed_venue|running_late|tired|budget_changed"}`. The deterministic planner re-runs, then only **today's day** carries the reason patch (lighter day, no walking legs in the rain, a cheaper day, ...); every other day keeps the plan the traveller already has. The reason and the `day_patched` flag are recorded on the trace. When today is not a trip day the fresh full plan is stored unchanged. |
 | POST | `/trips/{id}/share` | create (idempotent) a share token |
 
 ## Share (public, read-only)

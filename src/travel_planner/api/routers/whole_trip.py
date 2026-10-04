@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date as date_type
 
 from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from travel_planner.api.app import error_response
 from travel_planner.api.routers.trips import _parse_trip_id, db_session
+from travel_planner.db.models import ItineraryDay
 from travel_planner.schemas import Itinerary
 from travel_planner.services import checklists, entry_requirements, expenses, exports
 from travel_planner.services import live_mode as live
@@ -213,9 +216,12 @@ async def replan_today(
 ) -> object:
     """One-tap re-plan with a reason (Live Mode).
 
-    In this phase the re-plan re-runs the deterministic planner and records
-    the reason on the trace; reason-aware re-planning (indoor swaps on rain,
-    compressing on late) lands with the provider-backed planner.
+    The deterministic planner re-runs first (its trace is recorded), then
+    the stored version is the merge: **today's day carries the reason-aware
+    patch** (a lighter day when tired, no walking legs in the rain, a
+    cheaper day on a budget change, ...) and **every other day keeps the
+    plan the traveller already has**. When today is not a trip day the
+    fresh full plan is stored unchanged (the pre-patch behaviour).
     """
     body: dict[str, object] = {}
     raw = await request.body()
@@ -236,7 +242,39 @@ async def replan_today(
     if trip is None:
         return error_response(404, "not_found", f"trip {trip_id} does not exist", request.state.request_id)
 
+    previous_itinerary = await _load_itinerary(session, parsed)
     trip = await service.run_plan_for_trip(session, trip)
+
+    # Reason-aware, day-scoped patch on the freshly persisted version.
+    day_patched = False
+    fresh_row = await service.latest_itinerary(session, parsed)
+    today = date_type.today()
+    if (
+        previous_itinerary is not None
+        and fresh_row is not None
+        and fresh_row.payload
+        and any(d.date == today for d in previous_itinerary.days)
+    ):
+        fresh = Itinerary.model_validate(fresh_row.payload)
+        merged = live.merge_patched_today(previous_itinerary, fresh, today, reason)  # type: ignore[arg-type]
+        fresh_row.payload = merged.model_dump(mode="json")
+        if merged.total_cost is not None:
+            fresh_row.total_cost = merged.total_cost.amount
+        patched_day = next(d for d in merged.days if d.date == today)
+        result = await session.execute(
+            select(ItineraryDay).where(
+                ItineraryDay.itinerary_id == fresh_row.id,
+                ItineraryDay.day_date == today,
+            )
+        )
+        day_row = result.scalars().first()
+        if day_row is not None:
+            day_row.payload = patched_day.model_dump(mode="json")
+            day_row.budget = (
+                patched_day.daily_budget.amount if patched_day.daily_budget else None
+            )
+        day_patched = True
+
     # Record the live-mode reason on the trace so the edit is auditable.
     from travel_planner.db.models import AgentRun
 
@@ -245,9 +283,14 @@ async def replan_today(
             trip_id=parsed,
             node="replan_today",
             status="ok",
-            payload={"reason": reason},
+            payload={"reason": reason, "day_patched": day_patched},
         )
     )
     await session.commit()
-    return {"replanned": True, "reason": reason, "trip_status": trip.status}
+    return {
+        "replanned": True,
+        "reason": reason,
+        "day_patched": day_patched,
+        "trip_status": trip.status,
+    }
 

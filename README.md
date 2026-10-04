@@ -92,10 +92,11 @@ npx playwright test              # the golden path (boots the stack itself, from
 python evaluation/runner.py      # the evaluation gate: 25 scenarios
 ```
 
-Real numbers: **211 offline tests, 25/25 evaluation scenarios (100%), mean scenario
-latency 70.5 ms offline**, and a 12-test live suite covering the apmix gateway,
-Open-Meteo and OSRM. The committed evaluation report lives in
-`evaluation/reports/`.
+Real numbers: **225 offline tests, 25/25 evaluation scenarios (100%)**, and a
+12-test live suite covering the apmix gateway, Open-Meteo and OSRM. The Playwright
+suite runs the golden path **and an offline test** (after the service worker
+installs, the page still loads with the network cut). The committed evaluation
+report lives in `evaluation/reports/`.
 
 ## Environment variables
 
@@ -114,7 +115,7 @@ All configuration is env-driven (see `.env.example`). The essentials:
 ## Roadmap
 
 - Richer provider-backed venues (indoor/outdoor attributes) so re-plan reasons
-  can swap venues instead of re-running the whole plan.
+  can swap venues, not just transform the route legs.
 - OAuth (Google), referral credits and OG share images.
 - The web checklist/expense screens on top of the finished API.
 - Redis-backed distributed rate limiting and caching.

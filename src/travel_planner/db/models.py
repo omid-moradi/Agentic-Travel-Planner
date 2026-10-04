@@ -58,7 +58,28 @@ class User(IdMixin, Base):
     locale: Mapped[str] = mapped_column(String(8), default="fa")
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
     # Long-term preference memory: pace, food, transport, budget style.
+    # Password hashes deliberately do NOT live here - see UserCredential.
     preferences: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+
+
+class UserCredential(IdMixin, Base):
+    """A dedicated credential row per user (one row, one scheme).
+
+    The password hash lives here - never on ``users`` and never inside the
+    preferences JSON - so preference payloads can be shown, exported or
+    logged without ever touching credential material.
+    """
+
+    __tablename__ = "user_credentials"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True
+    )
+    #: ``scheme$params$hash`` - today always PBKDF2-SHA256 (240k iterations).
+    password_hash: Mapped[str] = mapped_column(String(320))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now()
+    )
 
 
 class Subscription(IdMixin, Base):

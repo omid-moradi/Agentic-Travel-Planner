@@ -63,6 +63,37 @@ the codebase; see FINAL-REPORT.md section 4.
   (`unable to open database file`). `LLM_*` still flows through, so the
   real gateway key from `.env` works inside the stack.
 
+## Post-close hardening (2026-10-04, "fix the remaining problems")
+
+The owner asked for the remaining fixable problems to be fixed. Four landed,
+all gates re-verified (ruff clean, mypy strict clean, **225 offline tests**,
+evaluation 25/25, web lint+build clean, **Playwright 2/2**):
+
+1. **Reason-aware, day-scoped `replan-today`** — tired trims today to a lighter
+   day, rain swaps walking legs for taxi estimates, closed_venue drops the
+   venue, running_late shifts the start by two hours, budget_changed keeps
+   only free/cheap venues. Only today's day changes; every other day keeps
+   the traveller's plan. Response gained `day_patched`; the trace records it.
+   (Unit + integration tests; the old "re-runs the whole plan" limitation is
+   gone.)
+2. **Venue rotation within a city** — the route anchor rotates per consecutive
+   day so multi-day stays no longer repeat the identical optimized day.
+3. **Latent workload bug fixed** — the planner's internal 8h projection
+   under-counted travel minutes relative to the validator's metric; found by
+   the rotation change (evaluation dropped to 22/25, which is exactly what the
+   gate is for). The projection now matches `estimate_daily_workload_hours`;
+   back to 25/25.
+4. **Dedicated `user_credentials` table** — password hashes moved out of the
+   display-safe `preferences` JSON; phase 6 legacy hashes are verified
+   read-only and lazily migrated on first login. (Unit tests for both paths.)
+5. **Service-worker offline e2e** — Playwright `setOffline(true)` + reload
+   after SW install; the landing page renders from the SW cache. The
+   "implemented, not verified" PWA item is now verified.
+
+Still gated on credentials or owner decisions (not code): Stripe/Zarinpal
+live onboarding, an OTLP collector, a live-LLM evaluation run, real-site
+scraping approval.
+
 ## Fixes found by actually running CI
 
 - The Playwright webServer command was Windows-only

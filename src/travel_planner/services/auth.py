@@ -26,7 +26,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from travel_planner.config.settings import Settings, get_settings
-from travel_planner.db.models import User
+from travel_planner.db.models import User, UserCredential
 
 logger = logging.getLogger(__name__)
 
@@ -112,11 +112,11 @@ async def register_user(
         locale=locale,
         is_admin=is_admin,
     )
-    # The password hash is stored on the preferences payload under a reserved
-    # key for this phase; a dedicated credential table arrives with the
-    # OAuth work (recorded in STATUS-P6.md).
-    user.preferences = {"password": hash_password(password)}
     session.add(user)
+    await session.flush()
+    # The hash goes to the dedicated credential table - never into the
+    # preferences JSON (which is treated as display-safe data).
+    session.add(UserCredential(user_id=user.id, password_hash=hash_password(password)))
     await session.flush()
     if is_admin:
         logger.info("bootstrap admin created for %s", normalised)
@@ -132,11 +132,29 @@ async def authenticate_user(
     if user is None:
         msg = "invalid email or password"
         raise AuthError(msg)
-    stored = str(user.preferences.get("password", ""))
-    if not stored or not verify_password(password, stored):
-        msg = "invalid email or password"
-        raise AuthError(msg)
-    return user
+
+    cred_result = await session.execute(
+        select(UserCredential).where(UserCredential.user_id == user.id)
+    )
+    credential = cred_result.scalars().first()
+    if credential is not None:
+        if not verify_password(password, credential.password_hash):
+            msg = "invalid email or password"
+            raise AuthError(msg)
+        return user
+
+    # Legacy fallback: hashes written to the preferences JSON by the phase 6
+    # code. Verified read-only, then lazily migrated to the credential table
+    # so the legacy copy disappears from the payload.
+    legacy_stored = str(user.preferences.get("password", ""))
+    if legacy_stored and verify_password(password, legacy_stored):
+        session.add(UserCredential(user_id=user.id, password_hash=legacy_stored))
+        user.preferences = {k: v for k, v in user.preferences.items() if k != "password"}
+        await session.flush()
+        return user
+
+    msg = "invalid email or password"
+    raise AuthError(msg)
 
 
 async def get_user(session: AsyncSession, user_id: str) -> User | None:

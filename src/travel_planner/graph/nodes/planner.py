@@ -82,18 +82,33 @@ def _plan_one_day(
     city: str,
     places: list[PlaceInfo],
     hotel: PlaceInfo | None,
+    day_in_city: int = 0,
 ) -> DayPlan:
-    """Build one day: order venues, schedule times, cap the workload."""
+    """Build one day: order venues, schedule times, cap the workload.
+
+    ``day_in_city`` rotates the route anchor: the first day in a city starts
+    from the hotel, every later day starts from a different venue so the
+    optimizer produces a genuinely different order instead of repeating
+    day one (the phase 2 known limitation).
+    """
     entry = _CITY_FIXTURES[city]
     center = entry["center"]
     assert isinstance(center, Coordinates)
 
     # Start the route from the hotel if we have one, otherwise the city center.
     start = hotel.coordinates if hotel is not None and hotel.coordinates else center
+    if day_in_city > 0 and places:
+        anchor = places[(day_in_city - 1) % len(places)]
+        if anchor.coordinates is not None:
+            start = anchor.coordinates
     ordered = optimize_route(places, start)
 
     activities: list[DayActivity] = []
     cursor = _DAY_START_MINUTES
+    # Travel minutes between the kept activities - the validator's workload
+    # metric (estimate_daily_workload_hours) counts these too, so the
+    # projection must include them or a long-leg day slips over the cap.
+    travel_minutes = 0
     previous: PlaceInfo | None = None
 
     for place in ordered:
@@ -103,11 +118,11 @@ def _plan_one_day(
             cursor += segment.duration_minutes
         duration = place.average_visit_duration_minutes or 60
         # Workload cap: stop adding activities once the day would exceed the cap.
-        minutes_so_far = sum(
+        visit_minutes = sum(
             a.place.average_visit_duration_minutes or 60 for a in activities
         )
         projected_hours = (
-            minutes_so_far + duration + (segment.duration_minutes if segment else 0)
+            visit_minutes + travel_minutes + duration + (segment.duration_minutes if segment else 0)
         ) / 60
         if projected_hours > _MAX_DAY_HOURS and activities:
             break
@@ -121,6 +136,8 @@ def _plan_one_day(
             )
         )
         cursor += duration
+        if segment is not None:
+            travel_minutes += segment.duration_minutes
         previous = place
 
     # Attach the leg to the next activity (transport_to_next lives on the earlier one).
@@ -179,8 +196,10 @@ def plan_itinerary(state: TravelState) -> dict[str, object]:
         hotels = entry["hotels"]
         assert isinstance(places, list) and isinstance(hotels, list)
         hotel = hotels[0] if hotels else None
-        for _ in range(city_nights):
-            days.append(_plan_one_day(day_number, cursor, city, list(places), hotel))
+        for day_in_city in range(city_nights):
+            days.append(
+                _plan_one_day(day_number, cursor, city, list(places), hotel, day_in_city)
+            )
             day_number += 1
             cursor += timedelta(days=1)
 
