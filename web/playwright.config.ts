@@ -16,8 +16,9 @@ export default defineConfig({
   },
   webServer: [
     {
-      command:
-        ".venv\\Scripts\\python.exe -m uvicorn travel_planner.api.app:app --port 8000",
+      // Cross-platform: `python` on PATH (overridable with API_PYTHON), so the
+      // same config boots the API on Windows dev and Linux CI runners.
+      command: `${process.env.API_PYTHON ?? "python"} -m uvicorn travel_planner.api.app:app --port 8000`,
       cwd: "..",
       url: "http://localhost:8000/api/v1/health",
       reuseExistingServer: true,

@@ -63,8 +63,18 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
 
-      - name: Install
+      # The golden path boots the FastAPI API itself, so the Python side must
+      # be importable on the runner (python -m uvicorn, PYTHONPATH=src).
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install web
         run: npm ci
+
+      - name: Install API
+        working-directory: .
+        run: pip install -e ".[api]"
 
       - name: Lint
         run: npm run lint
